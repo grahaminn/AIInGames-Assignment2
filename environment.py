@@ -109,7 +109,7 @@ class FrozenLake(Environment):
 			#The agent receives reward 1 upon taking an action at the goal.
 			#In every other case, the agent receives zero reward.
 			tile = self.lake_flat[state]
-			if next_state!=state and tile=='$':
+			if tile=='$':
 				return 1
 			else:
 				return 0

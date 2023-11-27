@@ -106,8 +106,13 @@ class FrozenLake(Environment):
 			pass
     
 		def r(self, next_state, state, action):
-			# TODO:
-			pass
+			#The agent receives reward 1 upon taking an action at the goal.
+			#In every other case, the agent receives zero reward.
+			tile = self.lake_flat[state]
+			if next_state!=state and tile=='$':
+				return 1
+			else:
+				return 0
    
 		def render(self, policy=None, value=None):
 			if policy is None:

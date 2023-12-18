@@ -16,52 +16,55 @@ class EnvironmentModel:
 	def __init__(self, n_states, n_actions, seed=None):
 		self.n_states = n_states
 		self.n_actions = n_actions
-        
+
 		self.random_state = np.random.RandomState(seed)
-        
+
 	def p(self, next_state, state, action):
 		raise NotImplementedError()
-    
+
 	def r(self, next_state, state, action):
 		raise NotImplementedError()
-        
+
 	def draw(self, state, action):
 		p = [self.p(ns, state, action) for ns in range(self.n_states)]
 		next_state = self.random_state.choice(self.n_states, p=p)
 		reward = self.r(next_state, state, action)
-        
+
 		return next_state, reward
 
-        
+
 class Environment(EnvironmentModel):
 	def __init__(self, n_states, n_actions, max_steps, pi, seed=None):
 		EnvironmentModel.__init__(self, n_states, n_actions, seed)
-        
+
+		self.n_steps = 0
+
 		self.max_steps = max_steps
-        
 		self.pi = pi
 		if self.pi is None:
 			self.pi = np.full(n_states, 1./n_states)
-        
-		def reset(self):
-			self.n_steps = 0
-			self.state = self.random_state.choice(self.n_states, p=self.pi)
-        
-			return self.state
-        
-		def step(self, action):
-			if action < 0 or action >= self.n_actions:
-				raise Exception('Invalid action.')
-        
-			self.n_steps += 1
-			done = (self.n_steps >= self.max_steps)
-        
-			self.state, reward = self.draw(self.state, action)
-        
-			return self.state, reward, done
-    
-		def render(self, policy=None, value=None):
-			raise NotImplementedError()
+
+		self.state = self.random_state.choice(self.n_states, p=self.pi)
+
+	def reset(self):
+		self.n_steps = 0
+		self.state = self.random_state.choice(self.n_states, p=self.pi)
+
+		return self.state
+
+	def step(self, action):
+		if action < 0 or action >= self.n_actions:
+			raise Exception('Invalid action.')
+
+		self.n_steps += 1
+		done = (self.n_steps >= self.max_steps)
+
+		self.state, reward = self.draw(self.state, action)
+
+		return self.state, reward, done
+
+	def render(self, policy=None, value=None):
+		raise NotImplementedError()
 
         
 class FrozenLake(Environment):
@@ -79,21 +82,20 @@ class FrozenLake(Environment):
 		# start (&), frozen (.), hole (#), goal ($)
 		self.lake = np.array(lake)
 		self.lake_flat = self.lake.reshape(-1)
-        
+
 		self.slip = slip
-        
+
 		n_states = self.lake.size + 1
 		n_actions = 4
-        
+
 		pi = np.zeros(n_states, dtype=float)
 		pi[np.where(self.lake_flat == '&')[0]] = 1.0
-        
+
 		self.absorbing_state = n_states - 1
-        
+
 		# TODO:
-        
 		Environment.__init__(self, n_states, n_actions, max_steps, pi, seed=seed)
-        
+
 	def step(self, action):
 		state, reward, done = Environment.step(self, action)
 
@@ -198,10 +200,10 @@ class FrozenLake(Environment):
 		if policy is None:
 			lake = np.array(self.lake_flat)
 
-		if self.state < self.absorbing_state:
-			lake[self.state] = '@'
+			if self.state < self.absorbing_state:
+				lake[self.state] = '@'
 
-			print(lake.reshape(self.lake.shape))
+				print(lake.reshape(self.lake.shape))
 		else:
 			# UTF-8 arrows look nicer, but cannot be used in LaTeX
 			# https://www.w3schools.com/charsets/ref_utf_arrows.asp

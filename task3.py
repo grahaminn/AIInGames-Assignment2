@@ -8,14 +8,16 @@ def sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
     epsilon = np.linspace(epsilon, 0, max_episodes)
 
     q = np.zeros((env.n_states, env.n_actions))
-    unexplored_actions = range(env.n_actions)
+
     for i in range(max_episodes):
         # initial state for episode i
         state = env.reset()
         #t does not equal i. it increases every time an action is taken in this episode
         t = 0
         # Select action a for state s according to an ϵ-greedy policy based on Q.
+        unexplored_actions = range(env.n_actions)
         action = e_greedy_action_selection(env.n_actions, unexplored_actions, epsilon, i, q, t, random_state, state)
+
         done=False
         while not done:
             t+=1
@@ -49,14 +51,15 @@ def q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
     epsilon = np.linspace(epsilon, 0, max_episodes)
 
     q = np.zeros((env.n_states, env.n_actions))
-    unexplored_actions = range(env.n_actions)
 
     for i in range(max_episodes):
         state = env.reset()
 
-        done = False
         # t does not equal i. it increases every time an action is taken in this episode
         t=0
+        unexplored_actions = range(env.n_actions)
+
+        done = False
         while not done:
             # Choose action using an epsilon-greedy policy
             action = e_greedy_action_selection(env.n_actions, unexplored_actions, epsilon, i, q, t, random_state, state)

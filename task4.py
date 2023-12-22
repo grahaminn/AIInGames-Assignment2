@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class LinearWrapper:
     def __init__(self, env):
         self.env = env
@@ -34,13 +35,61 @@ class LinearWrapper:
 
     def step(self, action):
         state, reward, done = self.env.step(action)
-
         return self.encode_state(state), reward, done
 
     def render(self, policy=None, value=None):
         self.env.render(policy, value)
 
+
+def e_greedy_action_selection(n_actions, epsilon, i, q, t, random_state):
+    if t <= n_actions or random_state.rand() < epsilon[i]:
+        return random_state.choice(n_actions)
+    else:
+        return q.argmax()
+
 def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
+    random_state = np.random.RandomState(seed)
+
+    eta = np.linspace(eta, 0, max_episodes)
+    epsilon = np.linspace(epsilon, 0, max_episodes)
+
+    theta = np.zeros(env.n_features)
+
+    for i in range(max_episodes):
+
+        features = env.reset()
+
+        q = features.dot(theta)
+
+        t = 0
+
+        done = False
+        while not done:
+
+            action = e_greedy_action_selection(env.n_actions, epsilon, i, q, t, random_state)
+            t += 1
+
+            next_features, reward, done = env.step(action)
+
+            q_next = next_features.dot(theta)
+
+            next_action = e_greedy_action_selection(env.n_actions, epsilon, i, q_next, t + 1, random_state)
+
+            # TD Error
+            td_error = reward + gamma * q_next[next_action] - q[action]
+
+            # Update theta. The gradient of q is features!
+            theta += eta[i] * td_error * features[action]
+
+            # Move to next action
+            features = next_features
+
+            q = q_next
+
+    return theta
+
+
+def linear_q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
     random_state = np.random.RandomState(seed)
 
     eta = np.linspace(eta, 0, max_episodes)
@@ -53,37 +102,21 @@ def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
 
         q = features.dot(theta)
 
-        action = random_state.choice(env.n_actions) if random_state.rand() < epsilon[i] else np.argmax(q)
-
+        t = 0
         done = False
         while not done:
+
+            action = e_greedy_action_selection(env.n_actions, epsilon, i, q, t, random_state)
+
             next_features, reward, done = env.step(action)
-            next_q = next_features.dot(theta)
-            next_action = random_state.choice(env.n_actions) if random_state.rand() < epsilon[i] else np.argmax(next_q)
+            delta = reward - q[action]
 
-            # TD Error
-            td_error = reward + gamma * next_q - q
+            q_next = next_features.dot(theta)
 
-            # Update theta
-            theta += eta[i] * td_error @ features
+            delta += gamma * q_next[action]
+            theta += eta[i]
 
-            # Move to next state
             features = next_features
-            action = next_action
-            q = next_q
-
-    return theta
-def linear_q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
-    random_state = np.random.RandomState(seed)
-
-    eta = np.linspace(eta, 0, max_episodes)
-    epsilon = np.linspace(epsilon, 0, max_episodes)
-
-    theta = np.zeros(env.n_features)
-
-    for i in range(max_episodes):
-        features = env.reset()
-
-        # TODO:
+            t += 1
 
         return theta

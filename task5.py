@@ -3,25 +3,41 @@ from collections import deque
 import numpy as np
 import torch
 
+
 class FrozenLakeImageWrapper:
     def __init__(self, env):
         self.env = env
 
         lake = self.env.lake
-
+        self.lake_flat = lake.reshape(-1)
         self.n_actions = self.env.n_actions
         self.state_shape = (4, lake.shape[0], lake.shape[1])
 
         lake_image = [(lake == c).astype(float) for c in ['&', '#', '$']]
 
-        self.state_image = {lake.absorbing_state:
-                                np.stack([np.zeros(lake.shape)] + lake_image)}
-        for state in range(lake.size):
-            # TODO:
-            pass
+        self.state_image = {self.env.absorbing_state: np.stack([np.zeros(lake.shape)] + lake_image)}
 
-        def encode_state(self, state):
-            return self.state_image[state]
+        # for state in range(lake.size):
+        #     # TODO:
+        #     if state != self.env.absorbing_state:
+        #         state_array = self.lake_flat[state]
+        #
+        #         # Create a 1D array for the current state
+        #         state_image = [float(state_array == c) for c in ['&', '#', '$']]
+        #
+        #         # Combine the 1D arrays into a 3D image
+        #         state_image_3d = np.zeros(self.state_shape)
+        #         state_image_3d[0] = state_image[0]  # Agent
+        #         state_image_3d[1] = state_image[1] * 2.0  # Start tile
+        #         state_image_3d[2] = state_image[2] * 3.0  # Hole tiles
+        #         state_image_3d[3] = float(state_array == '$') * 4.0  # Goal tile
+        #
+        #         # Store the state image in the dictionary
+        #         self.state_image[state] = state_image_3d
+
+
+    def encode_state(self, state):
+        return self.state_image[state]
 
     def decode_policy(self, dqn):
         states = np.array([self.encode_state(s) for s in range(self.env.n_states)])
@@ -62,9 +78,22 @@ class DeepQNetwork(torch.nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
     def forward(self, x):
+        #print(x)
         x = torch.tensor(x, dtype=torch.float)
 
     # TODO:
+        x = self.conv_layer(x)
+        # Flatten the output for FC
+        x = x.view(x.size(0), -1)
+        # first Relu
+        x = torch.relu(x)
+        # Apply the fully connected layer
+        x = self.fc_layer(x)
+        # a rectified linear unit activation function
+        x = torch.relu(x)
+        # Apply the output layer
+        x = self.output_layer(x)
+        return x
 
     def train_step(self, transitions, gamma, tdqn):
         states = np.array([transition[0] for transition in transitions])
@@ -83,7 +112,7 @@ class DeepQNetwork(torch.nn.Module):
         target = torch.Tensor(rewards) + gamma * next_q
 
         # TODO: the loss is the mean squared error between `q` and `target`
-        loss = 0
+        loss = torch.nn.functional.mse_loss(q.float(), target.float())
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -103,48 +132,54 @@ class ReplayBuffer:
 
     def draw(self, batch_size):
         # TODO:
-        pass
+        # Ensure the batch size does not exceed the buffer size
+        batch_size = min(batch_size, len(self.buffer))
+        # Random sample from the buffer
+        indices = np.random.choice(len(self.buffer), size=batch_size)
+        batch = [self.buffer[i] for i in indices]
 
-    def deep_q_network_learning(env, max_episodes, learning_rate, gamma, epsilon,
-                                batch_size, target_update_frequency, buffer_size,
-                                kernel_size, conv_out_channels, fc_out_features, seed):
-        random_state = np.random.RandomState(seed)
-        replay_buffer = ReplayBuffer(buffer_size, random_state)
+        return batch
 
-        dqn = DeepQNetwork(env, learning_rate, kernel_size, conv_out_channels, fc_out_features, seed=seed)
-        tdqn = DeepQNetwork(env, learning_rate, kernel_size, conv_out_channels, fc_out_features, seed=seed)
-
-        epsilon = np.linspace(epsilon, 0, max_episodes)
-
-        for i in range(max_episodes):
-            state = env.reset()
-
-            done = False
-            while not done:
-                if random_state.rand() < epsilon[i]:
-                    action = random_state.choice(env.n_actions)
-                else:
-                    with torch.no_grad():
-                        q = dqn(np.array([state]))[0].numpy()
-
-                    qmax = max(q)
-                    best = [a for a in range(env.n_actions) if np.allclose(qmax, q[a])]
-                    action = random_state.choice(best)
-
-                next_state, reward, done = env.step(action)
-
-                replay_buffer.append((state, action, reward, next_state, done))
-
-                state = next_state
-
-                if len(replay_buffer) >= batch_size:
-                    transitions = replay_buffer.draw(batch_size)
-                    dqn.train_step(transitions, gamma, tdqn)
-
-                if (i % target_update_frequency) == 0:
-                    tdqn.load_state_dict(dqn.state_dict())
-
-        return dqn
+    # def deep_q_network_learning(env, max_episodes, learning_rate, gamma, epsilon,
+    #                             batch_size, target_update_frequency, buffer_size,
+    #                             kernel_size, conv_out_channels, fc_out_features, seed):
+    #     random_state = np.random.RandomState(seed)
+    #     replay_buffer = ReplayBuffer(buffer_size, random_state)
+    #
+    #     dqn = DeepQNetwork(env, learning_rate, kernel_size, conv_out_channels, fc_out_features, seed=seed)
+    #     tdqn = DeepQNetwork(env, learning_rate, kernel_size, conv_out_channels, fc_out_features, seed=seed)
+    #
+    #     epsilon = np.linspace(epsilon, 0, max_episodes)
+    #
+    #     for i in range(max_episodes):
+    #         state = env.reset()
+    #
+    #         done = False
+    #         while not done:
+    #             if random_state.rand() < epsilon[i]:
+    #                 action = random_state.choice(env.n_actions)
+    #             else:
+    #                 with torch.no_grad():
+    #                     q = dqn(np.array([state]))[0].numpy()
+    #
+    #                 qmax = max(q)
+    #                 best = [a for a in range(env.n_actions) if np.allclose(qmax, q[a])]
+    #                 action = random_state.choice(best)
+    #
+    #             next_state, reward, done = env.step(action)
+    #
+    #             replay_buffer.append((state, action, reward, next_state, done))
+    #
+    #             state = next_state
+    #
+    #             if len(replay_buffer) >= batch_size:
+    #                 transitions = replay_buffer.draw(batch_size)
+    #                 dqn.train_step(transitions, gamma, tdqn)
+    #
+    #             if (i % target_update_frequency) == 0:
+    #                 tdqn.load_state_dict(dqn.state_dict())
+    #
+    #     return dqn
 
 def deep_q_network_learning(env, max_episodes, learning_rate, gamma, epsilon,
                             batch_size, target_update_frequency, buffer_size,
@@ -158,7 +193,7 @@ def deep_q_network_learning(env, max_episodes, learning_rate, gamma, epsilon,
                         fc_out_features, seed=seed)
 
     epsilon = np.linspace(epsilon, 0, max_episodes)
-
+    # epsilon-greedy exploration strategy
     for i in range(max_episodes):
         state = env.reset()
 

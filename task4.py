@@ -20,11 +20,11 @@ class LinearWrapper:
     def decode_policy(self, theta):
         policy = np.zeros(self.env.n_states, dtype=int)
         value = np.zeros(self.env.n_states)
-
+        #print('theta:',theta)
         for s in range(self.n_states):
             features = self.encode_state(s)
             q = features.dot(theta)
-
+            #print('s:{} q:{}'.format(s, q))
             policy[s] = np.argmax(q)
             value[s] = np.max(q)
 
@@ -47,6 +47,7 @@ def e_greedy_action_selection(n_actions, epsilon, i, q, t, random_state):
     else:
         return q.argmax()
 
+
 def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
     random_state = np.random.RandomState(seed)
 
@@ -61,13 +62,13 @@ def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
 
         q = features.dot(theta)
 
+        lr = eta[i]
+
         t = 0
 
         done = False
         while not done:
-
             action = e_greedy_action_selection(env.n_actions, epsilon, i, q, t, random_state)
-            t += 1
 
             next_features, reward, done = env.step(action)
 
@@ -79,12 +80,14 @@ def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
             td_error = reward + gamma * q_next[next_action] - q[action]
 
             # Update theta. The gradient of q is features!
-            theta += eta[i] * td_error * features[action]
+            theta += lr * td_error * features[action]
 
             # Move to next action
             features = next_features
 
             q = q_next
+
+            t += 1
 
     return theta
 
@@ -96,27 +99,27 @@ def linear_q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
     epsilon = np.linspace(epsilon, 0, max_episodes)
 
     theta = np.zeros(env.n_features)
-
     for i in range(max_episodes):
-        features = env.reset()
 
+        features = env.reset()
         q = features.dot(theta)
 
         t = 0
+
+        lr = eta[i]
         done = False
         while not done:
-
             action = e_greedy_action_selection(env.n_actions, epsilon, i, q, t, random_state)
 
             next_features, reward, done = env.step(action)
-            delta = reward - q[action]
 
             q_next = next_features.dot(theta)
 
-            delta += gamma * q_next[action]
-            theta += eta[i]
+            delta = reward + (gamma * np.max(q_next)) - q[action]
 
+            theta += (lr * delta * features[action])
+            q = q_next
             features = next_features
             t += 1
 
-        return theta
+    return theta

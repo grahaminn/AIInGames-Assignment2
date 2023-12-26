@@ -1,4 +1,5 @@
 import numpy as np
+import common
 
 
 class LinearWrapper:
@@ -41,12 +42,6 @@ class LinearWrapper:
         self.env.render(policy, value)
 
 
-def e_greedy_action_selection(n_actions, epsilon, i, q, t, random_state):
-    if t <= n_actions or random_state.rand() < epsilon[i]:
-        return random_state.choice(n_actions)
-    else:
-        return q.argmax()
-
 def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
     random_state = np.random.RandomState(seed)
 
@@ -65,15 +60,14 @@ def linear_sarsa(env, max_episodes, eta, gamma, epsilon, seed=None):
 
         done = False
         while not done:
-
-            action = e_greedy_action_selection(env.n_actions, epsilon, i, q, t, random_state)
+            action = common.linear_e_greedy_action_selection(env.n_actions, epsilon, i, q, t, random_state)
             t += 1
 
             next_features, reward, done = env.step(action)
 
             q_next = next_features.dot(theta)
 
-            next_action = e_greedy_action_selection(env.n_actions, epsilon, i, q_next, t + 1, random_state)
+            next_action = common.linear_e_greedy_action_selection(env.n_actions, epsilon, i, q_next, t + 1, random_state)
 
             # TD Error
             td_error = reward + gamma * q_next[next_action] - q[action]
@@ -105,18 +99,19 @@ def linear_q_learning(env, max_episodes, eta, gamma, epsilon, seed=None):
         t = 0
         done = False
         while not done:
-
-            action = e_greedy_action_selection(env.n_actions, epsilon, i, q, t, random_state)
+            action = common.linear_e_greedy_action_selection(env.n_actions, epsilon, i, q, t, random_state)
 
             next_features, reward, done = env.step(action)
             delta = reward - q[action]
 
             q_next = next_features.dot(theta)
 
-            delta += gamma * q_next[action]
+            next_action = common.linear_e_greedy_action_selection(env.n_actions, epsilon, i, q_next, t + 1, random_state)
+
+            delta += gamma * q_next[next_action]
             theta += eta[i]
 
-            features = next_features
+            q = q_next
             t += 1
 
         return theta

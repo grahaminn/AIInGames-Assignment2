@@ -25,7 +25,6 @@ class FrozenLakeImageWrapper:
                  state_layer[multi_index] = 1
                  self.state_image[state] = np.stack([state_layer] + lake_image)
 
-
     def encode_state(self, state):
         return self.state_image[state]
 
@@ -68,10 +67,10 @@ class DeepQNetwork(torch.nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
     def forward(self, x):
-        #print(x)
+        # print(x)
         x = torch.tensor(x, dtype=torch.float)
 
-    # TODO:
+        # TODO:
         x = self.conv_layer(x)
         # Flatten the output for FC
         x = x.view(x.size(0), -1)

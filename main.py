@@ -32,7 +32,7 @@ def main():
     max_episodes = 4000
     run_task3(env, gamma, max_episodes, seed)
 
-    #run_task4(env, gamma, max_episodes, seed)
+    run_task4(env, gamma, max_episodes, seed)
 
     run_task5(env, gamma, max_episodes)
 

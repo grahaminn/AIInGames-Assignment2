@@ -18,22 +18,12 @@ class FrozenLakeImageWrapper:
         self.state_image = {self.env.absorbing_state: np.stack([np.zeros(lake.shape)] + lake_image)}
 
         for state in range(lake.size):
-            # TODO:
-            if state != self.env.absorbing_state:
-                state_array = self.lake_flat[state]
-
-                # Create a 1D array for the current state
-                state_image = [float(state_array == c) for c in ['&', '#', '$']]
-
-                # Combine the 1D arrays into a 3D image
-                state_image_3d = np.zeros(self.state_shape)
-                state_image_3d[0] = state_image[0]  # Agent
-                state_image_3d[1] = state_image[1] * 2.0  # Start tile
-                state_image_3d[2] = state_image[2] * 3.0  # Hole tiles
-                state_image_3d[3] = float(state_array == '$') * 4.0  # Goal tile
-
-                # Store the state image in the dictionary
-                self.state_image[state] = state_image_3d
+             # TODO:
+             if state != self.env.absorbing_state:
+                 state_layer = np.zeros(lake.shape)
+                 multi_index = np.unravel_index(state, lake.shape)
+                 state_layer[multi_index] = 1
+                 self.state_image[state] = np.stack([state_layer] + lake_image)
 
     def encode_state(self, state):
         return self.state_image[state]
@@ -138,7 +128,6 @@ class ReplayBuffer:
         batch = [self.buffer[i] for i in indices]
 
         return batch
-
 
 def deep_q_network_learning(env, max_episodes, learning_rate, gamma, epsilon,
                             batch_size, target_update_frequency, buffer_size,

@@ -55,12 +55,12 @@ def policy_improvement(env, value, discount_factor):
 
 def policy_iteration(env, gamma, theta, max_iterations, policy=None):
     if policy is None:
-        policy = np.zeros((env.n_states, env.n_actions), dtype=np.float64)
+        policy = np.zeros((env.n_states, env.n_actions))
 
         # Initialize a policy with the first action as default
         policy[:, 0] = 1.0
     else:
-        policy = np.array(policy, dtype=np.float64)
+        policy = np.array(policy)
     
     for _ in range(max_iterations):
         # Calculate the value of the current policy using policy_evaluation
@@ -75,12 +75,14 @@ def policy_iteration(env, gamma, theta, max_iterations, policy=None):
             break
 
         policy = new_policy
+    
+    policy = policy.argmax(axis=1)
     return policy, value
 
 def value_iteration(env, gamma, theta, max_iterations, value=None):
     # Initialize the value array and policy to zeros
-    value = np.zeros(env.n_states, dtype=np.float64)
-    policy = np.zeros((env.n_states, env.n_actions), dtype=np.float64)
+    value = np.zeros(env.n_states)
+    policy = np.zeros((env.n_states, env.n_actions))
     
     for _ in range(max_iterations):
         delta = 0
@@ -128,4 +130,5 @@ def value_iteration(env, gamma, theta, max_iterations, value=None):
         policy[state, best_action] = 1.0
 
     # Return the optimized policy and the value function
+    policy = policy.argmax(axis=1)
     return policy, value

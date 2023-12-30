@@ -78,27 +78,54 @@ def policy_iteration(env, gamma, theta, max_iterations, policy=None):
     return policy, value
 
 def value_iteration(env, gamma, theta, max_iterations, value=None):
+    # Initialize the value array and policy to zeros
     value = np.zeros(env.n_states, dtype=np.float64)
     policy = np.zeros((env.n_states, env.n_actions), dtype=np.float64)
+    
     for _ in range(max_iterations):
         delta = 0
         for state in range(env.n_states):
             q_values = np.zeros(env.n_actions)
+
+            # Iterate over all actions to calculate their Q-values
             for action in range(env.n_actions):
+                # Accumulate the expected value for each action
                 for next_state in range(env.n_states):
-                    reward = env.r(next_state, state, action)
-                    q_values[action] += env.p(next_state, state, action) * (reward + gamma * value[next_state])
+                    # Ensure we do not execute an action in the absorbing state
+                    if state != env.absorbing_state:
+                        reward = env.r(next_state, state, action)
+                        q_values[action] += env.p(next_state, state, action) * (reward + gamma * value[next_state])
+            
+            # Find the best action's value for the current state
             best_value = np.max(q_values)
+
+            # Update delta with the absolute change in value for this state
             delta = max(delta, np.abs(best_value - value[state]))
+
+            # Update the value of the current state
             value[state] = best_value
+
+        # Check if the change in value function is below the threshold
         if delta < theta:
             break
+
+    # Derive the policy based on the final value function
     for state in range(env.n_states):
         q_values = np.zeros(env.n_actions)
+
+        # Calculate the Q-values for each action
         for action in range(env.n_actions):
             for next_state in range(env.n_states):
-                reward = env.r(next_state, state, action)
-                q_values[action] += env.p(next_state, state, action) * (reward + gamma * value[next_state])
+                # Ensure we do not execute an action in the absorbing state
+                if state != env.absorbing_state:
+                    reward = env.r(next_state, state, action)
+                    q_values[action] += env.p(next_state, state, action) * (reward + gamma * value[next_state])
+        
+        # Find the best action for the current state
         best_action = np.argmax(q_values)
+
+        # Update the policy to choose the best action with probability 1
         policy[state, best_action] = 1.0
+
+    # Return the optimized policy and the value function
     return policy, value

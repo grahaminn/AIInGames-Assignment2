@@ -27,12 +27,12 @@ def main():
     env = FrozenLake(lake, slip=0.1, max_steps=16, seed=seed)
     gamma = 0.9
 
-    #run_task2(env, gamma)
+    run_task2(env, gamma)
 
     max_episodes = 4000
     #run_task3(env, gamma, max_episodes, seed)
 
-    run_task4(env, gamma, max_episodes, seed)
+    #run_task4(env, gamma, max_episodes, seed)
 
     #run_task5(env, gamma, max_episodes)
 

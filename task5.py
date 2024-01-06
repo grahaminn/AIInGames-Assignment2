@@ -101,7 +101,6 @@ class DeepQNetwork(torch.nn.Module):
         target = torch.Tensor(rewards) + gamma * next_q
 
         # TODO: the loss is the mean squared error between `q` and `target`
-        # using MSE Loss for NN
         loss = torch.nn.functional.mse_loss(q.float(), target.float())
 
         self.optimizer.zero_grad()
@@ -110,7 +109,6 @@ class DeepQNetwork(torch.nn.Module):
 
 
 class ReplayBuffer:
-    # Used for remembering the previous actions taken
     def __init__(self, buffer_size, random_state):
         self.buffer = deque(maxlen=buffer_size)
         self.random_state = random_state
@@ -136,10 +134,9 @@ def deep_q_network_learning(env, max_episodes, learning_rate, gamma, epsilon,
                             kernel_size, conv_out_channels, fc_out_features, seed):
     random_state = np.random.RandomState(seed)
     replay_buffer = ReplayBuffer(buffer_size, random_state)
-    # Online Q-network
+
     dqn = DeepQNetwork(env, learning_rate, kernel_size, conv_out_channels,
                        fc_out_features, seed=seed)
-    # Target Q-network
     tdqn = DeepQNetwork(env, learning_rate, kernel_size, conv_out_channels,
                         fc_out_features, seed=seed)
 
@@ -150,13 +147,12 @@ def deep_q_network_learning(env, max_episodes, learning_rate, gamma, epsilon,
 
         done = False
         while not done:
-            #   Choosing action on Random
             if random_state.rand() < epsilon[i]:
                 action = random_state.choice(env.n_actions)
             else:
                 with torch.no_grad():
                     q = dqn(np.array([state]))[0].numpy()
-                # Choosing the best available action
+
                 qmax = max(q)
                 best = [a for a in range(env.n_actions) if np.allclose(qmax, q[a])]
                 action = random_state.choice(best)
